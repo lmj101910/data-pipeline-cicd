@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   gitlab:
     image: gitlab/gitlab-ce:latest
@@ -8,7 +6,7 @@ services:
     hostname: 'gitlab.example.com'
     environment:
       GITLAB_OMNIBUS_CONFIG: |
-        external_url 'http://gitlab.example.com'
+        external_url 'http://gitlab.example.com:8929'
         gitlab_rails['gitlab_shell_ssh_port'] = 2222
         gitlab_rails['time_zone'] = 'Asia/Seoul'
 
@@ -16,8 +14,8 @@ services:
         # gitlab_rails['smtp_enable'] = true
         # gitlab_rails['smtp_address'] = "smtp.gmail.com"
         # gitlab_rails['smtp_port'] = 587
-        # gitlab_rails['smtp_user_name'] = "your_email@gmail.com"
-        # gitlab_rails['smtp_password'] = "your_password"
+        # gitlab_rails['smtp_user_name'] = "${GITLAB_SMTP_USER}"
+        # gitlab_rails['smtp_password'] = "${GITLAB_SMTP_PASSWORD}"
         # gitlab_rails['smtp_domain'] = "gmail.com"
         # gitlab_rails['smtp_authentication'] = "login"
         # gitlab_rails['smtp_enable_starttls_auto'] = true
@@ -28,8 +26,8 @@ services:
         # 레지스트리 설정 (선택사항)
         # registry_external_url 'http://registry.example.com'
     ports:
-      - '80:80'
-      - '443:443'
+      - '8929:8929'
+      - '8443:443'
       - '2222:22'
     volumes:
       - gitlab_config:/etc/gitlab

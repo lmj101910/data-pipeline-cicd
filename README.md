@@ -20,47 +20,83 @@ docker --version
 docker compose version
 ```
 
+> Docker Compose v2부터 `version` 필드는 deprecated입니다. `docker-compose.yaml`에 작성하지 않습니다.
+
 ---
 
 ## 설치 및 실행
 
-### 1. 저장소 클론 (이 설정 파일 가져오기)
+### 1. 저장소 클론
 
 ```bash
 git clone <이 저장소 URL>
-cd gitlab_onpremis
+cd data-pipeline-cicd
 ```
 
-### 2. 도메인 설정
+### 2. 환경 변수 설정 (이메일 사용 시)
 
-[docker-compose.yaml](docker-compose.yaml) 파일에서 `gitlab.example.com`을 실제 도메인 또는 IP로 변경합니다.
+`.env.example`을 복사하여 `.env` 파일을 생성합니다:
 
-```yaml
-hostname: 'your-domain.com'       # 실제 도메인 또는 서버 IP
-external_url 'http://your-domain.com'   # 외부 접속 URL
+```bash
+cp .env.example .env
 ```
 
-> **로컬 테스트 시** `gitlab.example.com` 대신 서버 IP(예: `192.168.1.100`)를 사용하세요.
+`.env` 파일에 실제 값을 입력합니다:
 
-### 3. GitLab 시작
+```env
+GITLAB_SMTP_USER=your_email@gmail.com
+GITLAB_SMTP_PASSWORD=your_app_password
+```
+
+> `.env` 파일은 `.gitignore`에 등록되어 있어 git에 커밋되지 않습니다.
+> Gmail 앱 비밀번호 발급: [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+
+### 3. /etc/hosts 등록 (로컬 접속용)
+
+`gitlab.example.com`은 실제 도메인이 아니므로 로컬 DNS에 등록해야 합니다:
+
+```bash
+echo "127.0.0.1 gitlab.example.com" | sudo tee -a /etc/hosts
+```
+
+> 실제 서버 배포 시에는 DNS에 등록하거나 `hostname`, `external_url`을 실제 도메인/IP로 변경하세요.
+
+### 4. GitLab 시작
 
 ```bash
 docker compose up -d
 ```
 
-처음 실행 시 이미지 다운로드 및 초기화에 **약 3~5분** 소요됩니다.
+처음 실행 시 이미지 다운로드 및 초기화에 **약 5~10분** 소요됩니다.
 
-### 4. 실행 상태 확인
+### 5. 초기화 완료 확인
 
 ```bash
-# 컨테이너 상태 확인
-docker compose ps
-
-# 초기화 로그 확인 (healthy 상태가 될 때까지 대기)
-docker compose logs -f gitlab
+docker logs gitlab 2>&1 | grep "Reconfigured"
 ```
 
 `gitlab Reconfigured!` 메시지가 나타나면 준비 완료입니다.
+
+---
+
+## 포트 구성
+
+| 용도 | 호스트 포트 | 컨테이너 포트 |
+|------|------------|--------------|
+| HTTP (GitLab 웹) | `8929` | `8929` |
+| HTTPS | `8443` | `443` |
+| SSH (Git) | `2222` | `22` |
+
+**포트 매핑 주의사항**
+
+`external_url`에 포트를 명시하면 GitLab 내부 nginx가 해당 포트로 리슨합니다.
+따라서 `ports` 매핑의 양쪽을 반드시 일치시켜야 합니다:
+
+```yaml
+# external_url 'http://gitlab.example.com:8929' 설정 시
+ports:
+  - '8929:8929'   # ← 양쪽 모두 8929 (불일치 시 접속 불가)
+```
 
 ---
 
@@ -69,13 +105,13 @@ docker compose logs -f gitlab
 ### 웹 브라우저 접속
 
 ```
-http://gitlab.example.com  (또는 설정한 IP/도메인)
+http://gitlab.example.com:8929
 ```
 
 ### 관리자 초기 비밀번호 확인
 
 ```bash
-docker exec -it gitlab grep 'Password:' /etc/gitlab/initial_root_password
+docker exec gitlab grep 'Password:' /etc/gitlab/initial_root_password
 ```
 
 - **아이디:** `root`
@@ -101,6 +137,8 @@ Host gitlab.example.com
     Port 2222
 ```
 
+> SSH 포트를 2222로 설정한 이유: 호스트 서버의 22번 포트는 서버 관리용 SSH가 이미 사용 중이므로 충돌을 피하기 위함입니다.
+
 ---
 
 ## 데이터 저장 위치
@@ -123,8 +161,11 @@ docker volume inspect gitlab_config
 ## 주요 관리 명령어
 
 ```bash
-# GitLab 중지
+# GitLab 중지 (데이터 유지)
 docker compose down
+
+# 데이터까지 삭제 (초기화)
+docker compose down -v
 
 # GitLab 재시작
 docker compose restart
@@ -138,6 +179,9 @@ docker exec -it gitlab bash
 
 # GitLab 설정 재적용 (설정 변경 후)
 docker exec -it gitlab gitlab-ctl reconfigure
+
+# 서비스 상태 확인
+docker exec gitlab gitlab-ctl status
 ```
 
 ---
@@ -174,21 +218,30 @@ letsencrypt['contact_emails'] = ['admin@example.com']
 
 ## 문제 해결
 
-### 502 Bad Gateway
-- 초기화가 완료되지 않은 경우입니다. 3~5분 후 다시 접속하세요.
-- `docker compose logs -f gitlab` 로그에서 `Reconfigured!` 확인
+### 접속이 안 될 때 (Connection reset by peer)
 
-### 포트 충돌
-- 80, 443, 2222 포트가 이미 사용 중인 경우 `docker-compose.yaml`에서 포트 변경:
-```yaml
-ports:
-  - '8080:80'   # 호스트 포트:컨테이너 포트
-  - '8443:443'
-  - '2222:22'
+`external_url`의 포트와 `ports` 매핑이 일치하는지 확인합니다:
+
+```bash
+# nginx가 실제로 어느 포트에서 리슨하는지 확인
+docker exec gitlab gitlab-ctl status
+
+# 포트 바인딩 확인
+docker ps --format "table {{.Names}}\t{{.Ports}}"
+```
+
+### 502 Bad Gateway
+
+- 초기화가 완료되지 않은 경우입니다. 5~10분 후 다시 접속하세요.
+- 아래 명령으로 `Reconfigured!` 메시지 확인:
+
+```bash
+docker logs gitlab 2>&1 | grep "Reconfigured"
 ```
 
 ### 메모리 부족
-- GitLab은 최소 4GB RAM이 필요합니다. 메모리 부족 시 컨테이너가 자동 종료될 수 있습니다.
+
+GitLab은 최소 4GB RAM이 필요합니다. 메모리 부족 시 컨테이너가 자동 종료될 수 있습니다.
 
 ---
 
