@@ -1,0 +1,30 @@
+{
+  "name": "Airflow DAG Dev",
+  "dockerComposeFile": "../airflow/docker-compose.yaml",
+  "service": "airflow-apiserver",
+  "workspaceFolder": "/opt/airflow",
+  "remoteUser": "airflow",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.pylance",
+        "ms-python.black-formatter",
+        "ms-python.flake8",
+        "charliermarsh.ruff"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/home/airflow/.local/bin/python",
+        "python.analysis.extraPaths": ["/home/airflow/.local/lib/python3.12/site-packages"],
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "ms-python.black-formatter",
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter"
+        }
+      }
+    }
+  },
+
+  "postCreateCommand": "pip install apache-airflow-providers-fab apache-airflow-providers-postgres apache-airflow-providers-celery"
+}
