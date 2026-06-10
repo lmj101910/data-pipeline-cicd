@@ -1,0 +1,10 @@
+# MSSQL (Microsoft SQL Server)
+apache-airflow-providers-microsoft-mssql
+pymssql  # pip으로만 설치, 시스템 패키지 불필요
+
+# PostgreSQL (데이터 소스/타겟용)
+apache-airflow-providers-postgres
+psycopg2-binary
+
+# Common SQL utilities
+apache-airflow-providers-common-sql

@@ -1,5 +1,8 @@
 x-airflow-common: &airflow-common
-  image: apache/airflow:3.1.7
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: custom-airflow:3.1.7  # 빌드된 이미지 태그 (모든 서비스가 동일 이미지 공유)
   env_file:
     - ../.env
   environment:
