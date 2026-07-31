@@ -1,3 +1,5 @@
-.env
+**/.env
 .claude/
 airflow/logs/
+.DS_Store
+**/__pycache__/

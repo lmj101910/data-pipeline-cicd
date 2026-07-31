@@ -1,34 +1,29 @@
 services:
   gitlab:
-    image: gitlab/gitlab-ce:latest
+    image: gitlab/gitlab-ce:18.11.5-ce.0
     container_name: gitlab
     restart: always
-    hostname: 'gitlab.example.com'
+    hostname: ${GITLAB_HOSTNAME}
+    env_file:
+      - .env
     environment:
       GITLAB_OMNIBUS_CONFIG: |
-        external_url 'http://gitlab.example.com:8929'
-        gitlab_rails['gitlab_shell_ssh_port'] = 2222
+        external_url "http://${GITLAB_HOSTNAME}"
+        gitlab_rails['gitlab_shell_ssh_port'] = ${GITLAB_SSH_PORT}
         gitlab_rails['time_zone'] = 'Asia/Seoul'
+        gitlab_rails['backup_keep_time'] = 604800
+        gitlab_rails['initial_root_password'] = "${GITLAB_ROOT_PASSWORD}"
 
-        # 이메일 설정 (선택사항)
-        # gitlab_rails['smtp_enable'] = true
-        # gitlab_rails['smtp_address'] = "smtp.gmail.com"
-        # gitlab_rails['smtp_port'] = 587
-        # gitlab_rails['smtp_user_name'] = "${GITLAB_SMTP_USER}"
-        # gitlab_rails['smtp_password'] = "${GITLAB_SMTP_PASSWORD}"
-        # gitlab_rails['smtp_domain'] = "gmail.com"
-        # gitlab_rails['smtp_authentication'] = "login"
-        # gitlab_rails['smtp_enable_starttls_auto'] = true
-
-        # 백업 설정 (선택사항)
-        # gitlab_rails['backup_keep_time'] = 604800
-
-        # 레지스트리 설정 (선택사항)
-        # registry_external_url 'http://registry.example.com'
+        gitlab_rails['smtp_enable'] = true
+        gitlab_rails['smtp_address'] = "${GITLAB_SMTP_HOST}"
+        gitlab_rails['smtp_port'] = ${GITLAB_SMTP_PORT}
+        gitlab_rails['smtp_domain'] = "${GITLAB_SMTP_DOMAIN}"
+        gitlab_rails['smtp_authentication'] = false
+        gitlab_rails['smtp_enable_starttls_auto'] = false
+        gitlab_rails['gitlab_email_from'] = "${GITLAB_EMAIL_FROM}"
     ports:
-      - '8929:8929'
-      - '8443:443'
-      - '2222:22'
+      - "${GITLAB_HTTP_PORT}:${GITLAB_HTTP_PORT}"
+      - "${GITLAB_SSH_PORT}:22"
     volumes:
       - gitlab_config:/etc/gitlab
       - gitlab_logs:/var/log/gitlab

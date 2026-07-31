@@ -1,0 +1,23 @@
+services:
+  gitlab-runner:
+    image: gitlab/gitlab-runner:v18.11.5
+    container_name: gitlab-runner
+    restart: always
+    env_file:
+      - .env
+    # 사내 DNS 사용 시: extra_hosts 블록 전체 제거
+    # 사내 DNS 미사용 시(테스트 환경): .env의 GITLAB_HOST_ENTRY로 도메인→호스트 IP 매핑
+    extra_hosts:
+      - "${GITLAB_HOST_ENTRY}"
+    volumes:
+      - gitlab_runner_config:/etc/gitlab-runner
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4g
+
+volumes:
+  gitlab_runner_config:
+    driver: local
