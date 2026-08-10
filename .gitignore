@@ -3,3 +3,4 @@
 airflow/logs/
 .DS_Store
 **/__pycache__/
+gitlab/ssl/
