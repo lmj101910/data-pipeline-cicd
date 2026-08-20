@@ -8,10 +8,10 @@ services:
       - .env
     environment:
       GITLAB_OMNIBUS_CONFIG: |
-        external_url "https://${GITLAB_HOSTNAME}"
+        external_url "${GITLAB_EXTERNAL_URL}"
 
         letsencrypt['enable'] = false
-        gitlab_rails['nginx']['redirect_http_to_https'] = true
+        gitlab_rails['nginx']['redirect_http_to_https'] = ${GITLAB_REDIRECT_HTTP_TO_HTTPS}
 
         gitlab_rails['gitlab_shell_ssh_port'] = ${GITLAB_SSH_PORT}
         gitlab_rails['time_zone'] = 'Asia/Seoul'
@@ -33,7 +33,7 @@ services:
       - gitlab_config:/etc/gitlab
       - gitlab_logs:/var/log/gitlab
       - gitlab_data:/var/opt/gitlab
-      - /opt/gitlab/ssl:/etc/gitlab/ssl:ro
+      - ${GITLAB_SSL_DIR:-./ssl}:/etc/gitlab/ssl:ro
     shm_size: '512m'
     deploy:
       resources:
