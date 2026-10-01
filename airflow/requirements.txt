@@ -8,3 +8,7 @@ psycopg2-binary
 
 # Common SQL utilities
 apache-airflow-providers-common-sql
+
+# foot_traffic (KOSIS 유동인구 크롤링)
+selenium       # headless Chromium 제어 (Dockerfile에서 chromium/chromium-driver 시스템 패키지 설치)
+openpyxl       # 다운로드한 .xlsx 엑셀 파일 읽기

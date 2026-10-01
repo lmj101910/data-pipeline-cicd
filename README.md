@@ -39,6 +39,8 @@ data-pipeline-cicd/
 │   ├── docker-compose.yaml        # Airflow 3.1.7 + CeleryExecutor
 │   ├── Dockerfile                 # 커스텀 이미지 (providers 포함)
 │   ├── requirements.txt           # MSSQL, PostgreSQL provider 패키지
+│   ├── .env                       # 실제 값 (gitignore)
+│   ├── .env.example               # 환경변수 템플릿
 │   ├── nginx/
 │   │   └── airflow.conf           # Nginx 리버스 프록시 설정
 │   ├── dags/                      # DAG 파일
@@ -49,8 +51,10 @@ data-pipeline-cicd/
 │   ├── docker-compose.yaml        # SQL Server 2022 (Developer Edition)
 │   └── .env                       # 실제 값 (gitignore)
 │
-├── .env                           # Airflow 환경변수 (gitignore)
-├── .env.example                   # Airflow 환경변수 템플릿
+├── postgresql/
+│   ├── docker-compose.yaml        # PostgreSQL 17
+│   └── .env                       # 실제 값 (gitignore)
+│
 └── .gitignore
 ```
 
@@ -104,6 +108,7 @@ cp .env.example .env
 ### Airflow
 
 ```bash
+cd airflow
 cp .env.example .env
 # .env에 실제 키 값 입력
 ```
@@ -116,6 +121,7 @@ cp .env.example .env
 | `AIRFLOW_WWW_USER_USERNAME` | 관리자 계정 아이디 |
 | `AIRFLOW_WWW_USER_PASSWORD` | 관리자 계정 비밀번호 |
 | `AIRFLOW__WEBSERVER__SECRET_KEY` | Flask 세션 서명 키 |
+| `AIRFLOW__CORE__INTERNAL_API_SECRET_KEY` | 내부 API 인증 키 |
 | `AIRFLOW__API_AUTH__JWT_SECRET` | Worker ↔ API 서버 내부 JWT 인증 키 |
 
 키 생성 명령어:
@@ -233,10 +239,8 @@ Apache Airflow **3.1.7** + **CeleryExecutor** 기반 분산 처리 구성입니�
 
 ```bash
 cd airflow
-docker compose --env-file ../.env up -d
+docker compose up -d
 ```
-
-> `--env-file ../.env`를 반드시 명시해야 합니다. 누락 시 JWT 인증 실패가 발생합니다.
 
 ### 초기화 확인
 
@@ -312,6 +316,41 @@ docker compose up -d
 
 ---
 
+## PostgreSQL
+
+개발용 PostgreSQL 17 환경입니다. Airflow 메타데이터 DB(`airflow/`의 `postgres` 서비스)와는 별개로, DAG가 데이터를 적재/조회하는 **데이터 소스/타겟용**입니다.
+
+### 실행
+
+```bash
+cd postgresql
+docker compose up -d
+```
+
+### 접속 정보
+
+| 항목 | 값 |
+|------|-----|
+| 호스트 | `localhost` (호스트에서 접속 시) / `host.docker.internal` (Airflow 컨테이너에서 접속 시) |
+| 포트 | `5432` |
+| 계정 | `postgresql/.env`의 `POSTGRES_USER` |
+| 비밀번호 | `postgresql/.env`의 `POSTGRES_PASSWORD` |
+| DB | `postgresql/.env`의 `POSTGRES_DB` |
+
+Airflow DAG에서는 `PostgresHook`/`PostgresOperator`용 Connection을 하나 등록해서 씁니다 (`weather_mssql`과 동일한 방식):
+
+```bash
+docker exec airflow-apiserver airflow connections add 'dev_postgres' \
+  --conn-type postgres \
+  --conn-host host.docker.internal \
+  --conn-schema devdb \
+  --conn-login dev \
+  --conn-password 'Test@1234567' \
+  --conn-port 5432
+```
+
+---
+
 ## 네트워크 구성
 
 각 서비스는 독립된 Docker 네트워크를 사용합니다:
@@ -349,7 +388,7 @@ DAG 개발 시 자동완성 및 타입 힌트를 사용하려면 Dev Containers�
 **해결:**
 ```bash
 # .env에 JWT Secret 추가 후 재시작
-docker compose down && docker compose --env-file ../.env up -d
+docker compose down && docker compose up -d
 ```
 
 ### 502 Bad Gateway (Airflow Nginx)

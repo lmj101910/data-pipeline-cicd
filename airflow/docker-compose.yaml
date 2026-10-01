@@ -1,10 +1,7 @@
 x-airflow-common: &airflow-common
-  build:
-    context: .
-    dockerfile: Dockerfile
-  image: custom-airflow:3.1.7  # 빌드된 이미지 태그 (모든 서비스가 동일 이미지 공유)
+  image: custom-airflow:3.1.7  # 빌드된 이미지 태그 (모든 서비스가 동일 이미지 공유, build는 airflow-init에서만 수행)
   env_file:
-    - ../.env
+    - .env
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
@@ -70,6 +67,9 @@ services:
 
   airflow-init:
     <<: *airflow-common
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: airflow-init
     entrypoint: /bin/bash
     command:

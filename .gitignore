@@ -4,3 +4,5 @@ airflow/logs/
 .DS_Store
 **/__pycache__/
 gitlab/ssl/
+airflow.zip
+airflow/dags/old_py_files/
