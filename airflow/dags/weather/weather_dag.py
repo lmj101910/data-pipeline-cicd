@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import pendulum
 
-from airflow.sdk import Variable, dag, task
+from airflow.models import Variable
+from airflow.sdk import dag, task
 
 
 @dag(
@@ -50,7 +51,7 @@ def weather_forecast_dag():
         from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 
         if_date = context['logical_date'].in_timezone('Asia/Seoul').strftime('%Y%m%d')
-        hook = MsSqlHook(mssql_conn_id='weather_mssql')
+        hook = MsSqlHook(mssql_conn_id='selsndbdev-DMD_FCST')
 
         with hook.get_conn() as conn:
             with conn.cursor() as cursor:

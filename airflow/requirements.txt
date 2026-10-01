@@ -1,3 +1,11 @@
+# ── 예측 모델 실행 필수 (lotte_stockpile_forecast 자체 요구사항) ──
+pandas>=2.2
+numpy>=1.26
+lightgbm>=4.3          # macOS 는 `brew install libomp` 필요, Linux 이미지는 libgomp1
+scikit-learn>=1.4
+requests>=2.31
+pyyaml>=6.0
+
 # MSSQL (Microsoft SQL Server)
 apache-airflow-providers-microsoft-mssql
 pymssql  # pip으로만 설치, 시스템 패키지 불필요
@@ -5,6 +13,9 @@ pymssql  # pip으로만 설치, 시스템 패키지 불필요
 # PostgreSQL (데이터 소스/타겟용)
 apache-airflow-providers-postgres
 psycopg2-binary
+
+# sql 읽기
+sqlalchemy
 
 # Common SQL utilities
 apache-airflow-providers-common-sql

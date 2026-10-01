@@ -1,0 +1,112 @@
+# ------------------------------------------------------------------
+# 롯데웰푸드 비축재고 예측 - 설정
+# ------------------------------------------------------------------
+paths:
+  raw: data/raw              # 내부 데이터 (ERP/영업 시스템 추출물)
+  external: data/external    # 외부 API 수집 결과
+  processed: data/processed  # 주간 패널 등 가공 결과
+  outputs: outputs           # 예측/의사결정 결과
+
+channels: [편의점, 대형마트, 온라인, 도매대리점]
+
+# 권역 -> 기상청 코드 매핑 (ASOS 관측소 / 단기예보 격자 / 중기예보 구역코드)
+regions:
+  수도권: {asos_station: 108, nx: 60,  ny: 127, mid_ta_reg: "11B10101", mid_land_reg: "11B00000"}
+  충청:   {asos_station: 133, nx: 67,  ny: 100, mid_ta_reg: "11C20401", mid_land_reg: "11C20000"}
+  호남:   {asos_station: 156, nx: 58,  ny: 74,  mid_ta_reg: "11F20501", mid_land_reg: "11F20000"}
+  영남:   {asos_station: 159, nx: 98,  ny: 76,  mid_ta_reg: "11H20201", mid_land_reg: "11H20000"}
+  강원:   {asos_station: 105, nx: 92,  ny: 131, mid_ta_reg: "11D20501", mid_land_reg: "11D20000"}
+
+quantiles: [0.5, 0.7, 0.8, 0.9]
+
+calendar:
+  # 수능일: 교육부 공고(매년 3월). 미래 연도는 공고 확인 후 갱신.
+  suneung_dates:
+    2023: "2023-11-16"
+    2024: "2024-11-14"
+    2025: "2025-11-13"
+    2026: "2026-11-19"
+  # NEIS 학사일정 미수집 시 여름방학 fallback (MM-DD)
+  default_summer_vacation: {start: "07-20", end: "08-20"}
+
+brands:
+  빼빼로:
+    event_type: fixed_date
+    event_date: "11-11"
+    m1:
+      window_iso_weeks: [40, 46]   # 이벤트 윈도우(출고 기준). "주간출고/베이스라인 > 1.3" 구간으로 데이터 확인 후 조정
+      ref_iso_weeks: [27, 35]      # 베이스라인 산정 구간 (행사주 제외 중위값)
+      origin_dates: ["08-31", "09-30"]  # 1차(생산계획), 2차(사전발주 반영)
+      l1_alpha: 0.1                # 분위수 선형회귀 L1 규제 (행 수 60 내외 -> 강하게)
+      common_shock_sd_floor: 0.12  # 연도 공통 충격(로그) sd 하한. 3년으로 추정 불가 -> 검색트렌드 10년 변동성으로 보완
+    m2:
+      horizons: [1, 2, 3, 4]
+      use_weather: false
+      use_search: true
+      mode: quantile
+      monotone: {promo_intensity: 1, n_limited_sku: 1}   # mode=conformal 일 때만 적용됨
+      in_window_weight: 2.0
+    search_keywords: ["빼빼로", "빼빼로데이"]
+
+  팥빙수:
+    event_type: season
+    m1:
+      window_iso_weeks: [23, 35]   # 6월 초 ~ 8월 말
+      ref_iso_weeks: [10, 17]      # 3~4월 (시즌 전 shoulder)
+      origin_dates: ["04-15"]
+      l1_alpha: 0.1
+      common_shock_sd_floor: 0.15  # 여름 기온 변동성이 크므로 빼빼로보다 높게
+    m2:
+      horizons: [1, 2, 3, 4]
+      use_weather: true
+      use_search: true
+      mode: conformal             # 단조 제약(기온+, 강수-) 을 살리기 위해 conformal. backtest 로 quantile 과 비교 후 확정
+      monotone: {promo_intensity: 1, tmax_mean: 1, days_tmax_ge_30: 1, rain_days: -1}
+      in_window_weight: 2.0       # 시즌 주 가중
+    search_keywords: ["팥빙수", "빙수"]
+
+# 기상청 3개월 전망(확률형): API 미제공 -> 매년 4월 발표값 수동 입력.
+# 값 = [평년보다 높을 확률, 비슷할 확률, 낮을 확률] (%). null 이면 피처 미사용.
+seasonal_outlook:
+  2023: {jun: null, jul: null, aug: null}
+  2024: {jun: null, jul: null, aug: null}
+  2025: {jun: null, jul: null, aug: null}
+  2026: {jun: null, jul: null, aug: null}
+
+# NEIS 학사일정 표본 학교 (권역별 대표 중학교 1~2개). 학교코드는 src/external/neis.py find_school_code 로 조회.
+neis_sample_schools: []
+#  - {region: 수도권, office_code: B10, school_code: "7010XXX"}
+
+naver:
+  # 쇼핑인사이트 카테고리 ID(네이버쇼핑 URL의 catId). 예: 식품 최상위 = "50000006". 세부 카테고리는 확인 후 입력.
+  shopping_category_id: "50000006"
+
+ecos:
+  # 한국은행 ECOS 소비자심리지수. 통계표/항목 코드는 ECOS 통계코드검색에서 확인 후 필요시 수정.
+  stat_code: "511Y002"
+  item_code: "FME"
+
+lgbm:
+  # mode: quantile  = alpha 별 quantile objective (단조 제약 불가)
+  #       conformal = 단조 제약 L2 모델 + OOF 잔차 분위수 (split-conformal). 브랜드 m2 에서 mode 로 개별 지정 가능
+  mode: quantile
+  n_jobs: 4                 # 소표본이라 스레드 과다 시 오버헤드만 증가
+  num_leaves: 6
+  min_data_in_leaf: 30
+  learning_rate: 0.03
+  n_estimators: 800
+  feature_fraction: 0.7
+  bagging_fraction: 0.8
+  bagging_freq: 1
+  lambda_l2: 5.0
+  early_stopping_rounds: 50
+
+data_quality:
+  stockout_max_share: 0.6   # 결품 보정 상한 (SKU-일 결품 비율)
+  outlier_z: 4.0            # 이상치 플래그 임계 (robust z)
+
+newsvendor:
+  # 단위당 비용. 사업부 확정 필요. tau = cu / (cu + co)
+  cu: 1.0    # 결품(underage): 마진 손실 + 거래처 페널티/기회손실
+  co: 0.25   # 과잉(overage): 보관 + 할인/폐기
+  aggregation: simulate        # simulate(공통충격+고유잔차 시뮬레이션, 권장) | sum_quantiles(분위수 단순합, 보수적 상한)

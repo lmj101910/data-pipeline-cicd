@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import pendulum
 
-from airflow.sdk import Variable, dag, task
+from airflow.models import Variable
+from airflow.sdk import dag, task
 
 
 @dag(

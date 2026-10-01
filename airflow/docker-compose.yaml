@@ -1,5 +1,5 @@
 x-airflow-common: &airflow-common
-  image: custom-airflow:3.1.7  # 빌드된 이미지 태그 (모든 서비스가 동일 이미지 공유, build는 airflow-init에서만 수행)
+  image: custom-airflow:3.3.2  # 빌드된 이미지 태그 (모든 서비스가 동일 이미지 공유, build는 airflow-init에서만 수행)
   env_file:
     - .env
   environment:
@@ -108,7 +108,7 @@ services:
     ports:
       - '8080:8080'
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8080/api/v2/version"]
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/api/v2/monitor/health"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -124,7 +124,7 @@ services:
     container_name: airflow-scheduler
     command: scheduler
     healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
+      test: ["CMD-SHELL", 'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"']
       interval: 30s
       timeout: 10s
       retries: 5

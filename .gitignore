@@ -6,3 +6,5 @@ airflow/logs/
 gitlab/ssl/
 airflow.zip
 airflow/dags/old_py_files/
+airflow/plugins/lotte_stockpile_forecast/data/
+airflow/plugins/lotte_stockpile_forecast/outputs/
