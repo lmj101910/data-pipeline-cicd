@@ -8,3 +8,5 @@ airflow.zip
 airflow/dags/old_py_files/
 airflow/plugins/lotte_stockpile_forecast/data/
 airflow/plugins/lotte_stockpile_forecast/outputs/
+dbt/my_project/logs/
+dbt/my_project/target/

@@ -1,0 +1,13 @@
+services:
+  dbt:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dev-dbt
+    env_file:
+      - .env
+    volumes:
+      - ./my_project:/dbt/my_project
+      - ./profiles.yml:/root/.dbt/profiles.yml:ro
+    working_dir: /dbt/my_project
+    restart: unless-stopped

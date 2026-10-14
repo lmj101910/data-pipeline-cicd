@@ -1,0 +1,3 @@
+dbt-core>=1.11,<1.12
+dbt-postgres>=1.11,<1.12     # PostgreSQL + Yellowbrick(Postgres 호환) 공용
+dbt-sqlserver>=1.11,<1.12    # MSSQL

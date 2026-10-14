@@ -1,0 +1,37 @@
+my_project:
+  target: postgres
+  outputs:
+    # 로컬 dev-postgresql (postgresql/docker-compose.yaml) 또는 운영 Postgres
+    postgres:
+      type: postgres
+      host: "{{ env_var('PG_HOST') }}"
+      port: "{{ env_var('PG_PORT', '5432') | as_number }}"
+      user: "{{ env_var('PG_USER') }}"
+      password: "{{ env_var('PG_PASSWORD') }}"
+      dbname: "{{ env_var('PG_DBNAME') }}"
+      schema: "{{ env_var('PG_SCHEMA', 'public') }}"
+      threads: 4
+
+    # Yellowbrick은 Postgres 와이어 프로토콜 호환이라 dbt-postgres 어댑터를 그대로 사용
+    yellowbrick:
+      type: postgres
+      host: "{{ env_var('YB_HOST') }}"
+      port: "{{ env_var('YB_PORT', '5432') | as_number }}"
+      user: "{{ env_var('YB_USER') }}"
+      password: "{{ env_var('YB_PASSWORD') }}"
+      dbname: "{{ env_var('YB_DBNAME') }}"
+      schema: "{{ env_var('YB_SCHEMA', 'public') }}"
+      threads: 4
+
+    # 로컬 dev-mssql (mssql/docker-compose.yaml) 또는 운영 MSSQL
+    mssql:
+      type: sqlserver
+      driver: "ODBC Driver 18 for SQL Server"
+      host: "{{ env_var('MSSQL_HOST') }}"
+      port: "{{ env_var('MSSQL_PORT', '1433') | as_number }}"
+      user: "{{ env_var('MSSQL_USER') }}"
+      password: "{{ env_var('MSSQL_PASSWORD') }}"
+      database: "{{ env_var('MSSQL_DATABASE') }}"
+      schema: "{{ env_var('MSSQL_SCHEMA', 'dbo') }}"
+      TrustServerCertificate: true
+      threads: 4
